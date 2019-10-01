@@ -1,0 +1,15 @@
+version: '3'
+services:
+  php:
+    build: .
+    volumes:
+      - .:/var/www
+    depends_on:
+      - elasticsearch
+    ports:
+      - "8888:80"
+  elasticsearch:
+    image: elasticsearch:7.3.1
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms1g -Xmx4g"
