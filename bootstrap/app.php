@@ -22,10 +22,11 @@ $app = new Laravel\Lumen\Application(
 );
 
 $app->configure('elasticsearch');
+$app->configure('images');
 
 // $app->withFacades();
 
-// $app->withEloquent();
+$app->withEloquent();
 
 /*
 |--------------------------------------------------------------------------

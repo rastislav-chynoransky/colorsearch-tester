@@ -11,9 +11,4 @@ return [
         ]
     ],
     'index' => 'images',
-    'mapping' => [
-        'properties' => [
-            'colors' => 'nested',
-        ]
-    ],
 ];

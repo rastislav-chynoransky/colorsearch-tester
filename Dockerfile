@@ -1,13 +1,14 @@
 FROM php:7.3
 
+RUN apt-get update -y && apt-get install -y \
+    libpng-dev \
+    libjpeg-dev \
+    libzip-dev \
+    git
 
-RUN apt-get update -y && apt-get install -y libzip-dev
-#    libpng-dev \
-#    libjpeg-dev \
-#    libzip-dev \
-#    git
-
-RUN docker-php-ext-install zip
+RUN docker-php-ext-configure gd --with-jpeg-dir=/usr/include/
+RUN docker-php-ext-install gd zip
+RUN echo "memory_limit=-1" > $PHP_INI_DIR/conf.d/memory-limit.ini
 
 WORKDIR /var/www
 

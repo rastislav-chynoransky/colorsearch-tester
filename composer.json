@@ -4,10 +4,17 @@
     "keywords": ["framework", "laravel", "lumen"],
     "license": "MIT",
     "type": "project",
+    "repositories": [{
+        "type": "vcs",
+        "url": "https://github.com/rastislav-chynoransky/color-extractor.git",
+        "no-api": true
+    }],
     "require": {
         "php": "^7.2",
         "elasticsearch/elasticsearch": "^7.3",
-        "laravel/lumen-framework": "^6.0"
+        "laravel/lumen-framework": "^6.0",
+        "league/color-extractor": "dev-master",
+        "primal/color": "^1.0"
     },
     "require-dev": {
         "fzaninotto/faker": "^1.4",
@@ -31,6 +38,7 @@
         ]
     },
     "config": {
+        "github-protocols": ["https"],
         "preferred-install": "dist",
         "sort-packages": true,
         "optimize-autoloader": true

@@ -11,55 +11,96 @@
 |
 */
 
-use Elasticsearch\Client;
+use App\ColorDistribution;
+use App\Repositories\ImageRepository;
 use Illuminate\Http\Request;
-use Faker\Generator;
 
-$router->get('/', function (Request $request, Client $client) use ($router) {
-    $page = (int)$request->query('page') > 0 ?: 1;
-    $perPage = 100;
+$router->get('/', function (Request $request, ImageRepository $repository) use ($router) {
+    $perPage = 1000;
+    $page = (int)$request->query('page');
+    $page = $page > 0 ? $page : 1;
+    $diff = 15;
 
-    $response = $client->search([
-        'index' => config('elasticsearch.index'),
-        'body' => [
-            'from' => ($page - 1) * $perPage,
-            'size' => $perPage,
-        ],
-    ]);
+    $id = $request->query('id');
+    $image = $id !== null ? $repository->get((int)$id) : null;
 
-    $color = (string)$request->query('color');
-    $images = [];
-    foreach ($response['hits']['hits'] as $hit) {
-        $images[] = $hit['_source'];
+    if ($image) {
+        $distribution = $image->getColorDistribution();
+    } else {
+        $distribution = new ColorDistribution(array_combine(
+            (array)$request->query('colors'),
+            (array)$request->query('amounts')
+        ));
     }
+
+    $musts = [];
+    foreach ($distribution as $color => $amount) {
+        $hsl = $color->toHSL();
+        $amountDiff = max($amount / 2, 0.15);
+        $musts[] = [
+            'bool' => [
+                'must' => [
+                    [
+                        'range' => [
+                            'hsl.h' => [
+                                'gte' => $hsl->hue - $diff,
+                                'lte' => $hsl->hue + $diff,
+                            ]
+                        ]
+                    ],
+                    [
+                        'range' => [
+                            'hsl.s' => [
+                                'gte' => $hsl->saturation - $diff,
+                                'lte' => $hsl->saturation + $diff,
+                            ]
+                        ]
+                    ],
+                    [
+                        'range' => [
+                            'hsl.l' => [
+                                'gte' => $hsl->luminance - $diff,
+                                'lte' => $hsl->luminance + $diff,
+                            ]
+                        ]
+                    ],
+                    [
+                        'range' => [
+                            'hsl.amount' => [
+                                'gte' => $amount - $amountDiff,
+                                'lte' => $amount + $amountDiff,
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ];
+    }
+
+    $query = [];
+    $sort = [];
+    if ($musts) {
+        foreach ($musts as $must) {
+            $query['bool']['should'][]['nested'] = [
+                'path' => 'hsl',
+                'query' => $must,
+            ];
+        }
+        $query['bool']['minimum_should_match'] = '-30%';
+    } else {
+        $query['match_all'] = new \stdClass();
+        $sort[] = ['hue' => 'desc'];
+    }
+
+    $results = $repository->search([
+        'from' => ($page - 1) * $perPage,
+        'size' => $perPage,
+        'query' => $query,
+        'sort' => $sort,
+    ]);
 
     return view('images', [
-        'color' => $color,
-        'images' => $images,
+        'colors' => $distribution,
+        'images' => $results,
     ]);
-});
-
-$router->get('/regenerate', function (Client $client, Generator $faker) {
-    $client->deleteByQuery([
-        'index' => config('elasticsearch.index'),
-        'body' => [
-            'query' => [
-                'match_all' => new \stdClass,
-            ]
-        ]
-    ]);
-
-    for ($i = 100; $i--;) {
-        $colors = [
-            ['hex' => $faker->hexColor, 'amount' => 100],
-        ];
-
-        $client->index([
-            'index' => config('elasticsearch.index'),
-            'body' => [
-                'id' => $i,
-                'colors' => $colors
-            ],
-        ]);
-    }
 });

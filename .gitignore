@@ -2,5 +2,7 @@
 /.idea
 Homestead.json
 Homestead.yaml
-.env
+/.env
 .phpunit.result.cache
+/db.sqlite3
+/docker-compose.override.yml
